@@ -23,6 +23,8 @@ namespace Bray {
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
 
+		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free road
+		//TODO: Add a law cat with the Wanted spawns
 
 		public Bray() {
 
@@ -46,7 +48,6 @@ namespace Bray {
 				CreateBray();
 			}
 
-
 			if (_theBray != null) {
 
 				if (pressedKeys.Contains(Keys.F10) || pressedKeys.Contains(Keys.F14)) {
@@ -63,6 +64,11 @@ namespace Bray {
 				if (MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false) > 150) {
 					ComeToDaddy(20);
 				}
+
+				if (Game.Player.IsDead) {
+					SetBrayMaxHealth();
+				}
+				if()
 
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
 				//AddDebugMessage(() => $"Relationship With Ped Bray->Me: {_theBray.GetRelationshipWithPed(Game.Player.Ped)}\n");
@@ -95,6 +101,8 @@ namespace Bray {
 				AddDebugMessage(() => l.ToString() + "\n");
 			}
 
+			AddDebugMessage(() => $"Keys: {string.Join(", ", pressedKeys)}\n");
+
 			if (showDebug) {
 				TextElement textElement = new TextElement($"{_debug}", new PointF(100.0f, 100.0f), 0.35f);
 				textElement.Draw();
@@ -109,36 +117,11 @@ namespace Bray {
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
 				CreateBray();
 			}
-			if (e.KeyCode == Keys.F14) {
-				//log = new List<string>();
-				//if (_theBray == null) {
-				//	_theBray = World.GetClosestPed(Game.Player.Ped.Position);
-				//}
-				//Settings.SetValue("Health", "Points", _theBray.Attributes.Health.Points);
-				//Settings.SetValue("Health", "Max Points", _theBray.Attributes.Health.MaxPoints);
-				//Settings.SetValue("Health", "Max Rank", _theBray.Attributes.Health.MaxRank);
 
-
-				//for (int i = 0; i <= 70; i++) {
-				//	Settings.SetValue("Combat Float", i.ToString(), PED.GET_COMBAT_FLOAT(_theBray, i));
-				//}
-				//foreach (ePedScriptConfigFlags flag in Enum.GetValues(typeof(ePedScriptConfigFlags))) {
-				//	Settings.SetValue("Config Flags", flag.ToString(), _theBray.GetConfigFlag(flag));
-				//}
-
-				//for (int i = 0; i <= 134; i++) {
-				//	Settings.SetValue("Combat Attributes", i.ToString(), PED._GET_PED_COMBAT_ATTRIBUTE(_theBray.Handle, i));
-				//}
-
-				//Settings.SetValue("Relationship", "Relationship", _theBray.GetRelationshipWithPed(Game.Player.Ped));
-
-				//Settings.Save();
-				//RDR2.UI.Screen.DisplaySubtitle($"Saved?");
-			}
+			if (e.KeyCode == Keys.F14) { }
 
 			if (e.KeyCode == Keys.F16) {
 				Hunt(300);
-				//TASK.TASK_COMBAT_HATED_TARGETS(_theBray.Handle, 100);
 			}
 
 			if (e.KeyCode == Keys.F15) {
@@ -194,19 +177,12 @@ namespace Bray {
 
 			_theBray = World.CreatePed(PedHash.cs_aberdeenpigfarmer, spawnPoint, 0);
 			_theBray.RelationshipGroup = _braylationship;
-			_theBray.MaxHealth = 225;
-			_theBray.Health = 225;
+			SetBrayMaxHealth();
 			_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
 
 			//PED.SET_PED_AS_GROUP_MEMBER(_theBray.Handle, _playerGroup);
 
 			Hunt(300);
-			//PED._SET_PED_COMBAT_STYLE(_theBray.Handle, MISC.GET_HASH_KEY("SituationEscalate_AttackClose"), 1, -1);
-			//PED._SET_PED_COMBAT_STYLE_MOD(_theBray.Handle, MISC.GET_HASH_KEY("GetUpClose"), 1);
-			//PED.SET_PED_COMBAT_MOVEMENT(_theBray.Handle, 3);
-
-			//World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, playerGroup);
-			//World.SetRelationshipBetweenGroups(eRelationshipType.Hate, playerGroup, _braylationship);w
 
 		}
 
@@ -224,7 +200,11 @@ namespace Bray {
 			TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
 			var blip = _theBray.GetBlip;
 			MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_NEUTRAL);
+		}
 
+		public void SetBrayMaxHealth() {
+			_theBray.MaxHealth = 225;
+			_theBray.Health = 225;
 		}
 
 		public void AddDebugMessage(Func<string> message) {
