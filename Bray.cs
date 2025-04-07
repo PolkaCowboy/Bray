@@ -68,7 +68,6 @@ namespace Bray {
 				if (Game.Player.IsDead) {
 					SetBrayMaxHealth();
 				}
-				if()
 
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
 				//AddDebugMessage(() => $"Relationship With Ped Bray->Me: {_theBray.GetRelationshipWithPed(Game.Player.Ped)}\n");
