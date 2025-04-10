@@ -29,6 +29,7 @@ namespace Bray {
 		//TODO: Spawn whenever Arthur enters combat
 		//TODO: Can I add random hats?
 		//TODO: Can the mod log bray & arthur deaths per mission?
+		//TODO: Add a small grace period after hitting the Come to Daddy Button
 		
 		public Bray() {
 
