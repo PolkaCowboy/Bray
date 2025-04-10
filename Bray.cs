@@ -28,7 +28,8 @@ namespace Bray {
 		//TODO: Add a law cat with the Wanted spawns
 		//TODO: Spawn whenever Arthur enters combat
 		//TODO: Can I add random hats?
-
+		//TODO: Can the mod log bray & arthur deaths per mission?
+		
 		public Bray() {
 
 			_braylationship = World.AddRelationshipGroup($"Braylationship");
