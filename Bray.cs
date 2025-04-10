@@ -23,8 +23,11 @@ namespace Bray {
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
 
-		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free road
+		/* Ideas */
+		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free roam
 		//TODO: Add a law cat with the Wanted spawns
+		//TODO: Spawn whenever Arthur enters combat
+		//TODO: Can I add random hats?
 
 		public Bray() {
 
