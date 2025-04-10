@@ -1,0 +1,1 @@
+Mod for the [Infinite Bray Aberdeen Experiment](https://www.youtube.com/playlist?list=PLoJZjzCCzGhTGCIt326yvqf-5pQFFjYX-). I haven't bundled a release yet as all the hot keys are mapped to F13 and up for use with a Stream Deck, and I want to use it a bit more to verify stability. 
