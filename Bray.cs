@@ -58,20 +58,18 @@ namespace Bray {
 				//AddDebugMessage(() => $"Relationship With Ped Me->Bray: {Game.Player.Ped.GetRelationshipWithPed(_theBray)}\n");
 				//AddDebugMessage(() => $"Ped Ids: {PLAYER.PLAYER_PED_ID()}, {Game.Player.Ped.Handle}\n");
 				//AddDebugMessage(() => $"Bray Handle: {_theBray.Handle}\n");
-				AddDebugMessage(() => $"On Train: {Game.Player.Ped.IsInTrain}\n");
-				AddDebugMessage(() => $"In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
+				AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
+				AddDebugMessage(() => $"Bray In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
 
+				if (pressedKeys.Contains(Keys.F10) || pressedKeys.Contains(Keys.F14)) {
+					CAM._FORCE_CINEMATIC_DEATH_CAM_ON_PED(_theBray.Handle);
+					RDR2.UI.Screen.StopAllEffects();
+				}
 
 				if (_theBray.IsAlive) {
 					AddDebugMessage(() => $"Bray is Alive\n");
-					if (pressedKeys.Contains(Keys.F10) || pressedKeys.Contains(Keys.F14)) {
-						//CAM.FORCE_CINEMATIC_RENDERING_THIS_UPDATE(true);
-						//CAM.CINEMATIC_LOCATION_OVERRIDE_TARGET_ENTITY_THIS_UPDATE("Cam", _theBray.Handle);
-						CAM._FORCE_CINEMATIC_DEATH_CAM_ON_PED(_theBray.Handle);
-						RDR2.UI.Screen.StopAllEffects();
-					}
 
 					if (!_truce && !PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())) {
 						Hunt(2000);
