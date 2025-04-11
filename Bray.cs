@@ -18,7 +18,6 @@ namespace Bray {
 		Ped _theBray = null;
 		uint _braylationship = 0;
 		private bool _truce = false;
-		int _playerGroup = 0;
 
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
@@ -30,7 +29,7 @@ namespace Bray {
 		//TODO: Can I add random hats?
 		//TODO: Can the mod log bray & arthur deaths per mission?
 		//TODO: Add a small grace period after hitting the Come to Daddy Button
-		
+
 		public Bray() {
 
 			_braylationship = World.AddRelationshipGroup($"Braylationship");
@@ -50,7 +49,7 @@ namespace Bray {
 			_debug = string.Empty;
 
 			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
-				CreateBray();
+				CreateBray(Game.Player.Ped.IsInTrain ? 2 : 50);
 			}
 
 			if (_theBray != null) {
@@ -67,7 +66,7 @@ namespace Bray {
 				}
 
 				if (MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false) > 150) {
-					ComeToDaddy(20);
+					ComeToDaddy(Game.Player.Ped.IsInTrain ? 2 : 20);
 				}
 
 				if (Game.Player.IsDead) {
@@ -79,6 +78,7 @@ namespace Bray {
 				//AddDebugMessage(() => $"Relationship With Ped Me->Bray: {Game.Player.Ped.GetRelationshipWithPed(_theBray)}\n");
 				//AddDebugMessage(() => $"Ped Ids: {PLAYER.PLAYER_PED_ID()}, {Game.Player.Ped.Handle}\n");
 				//AddDebugMessage(() => $"Bray Handle: {_theBray.Handle}\n");
+				AddDebugMessage(() => $"On Train: {Game.Player.Ped.IsInTrain}\n");
 				AddDebugMessage(() => $"In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}");
@@ -90,7 +90,7 @@ namespace Bray {
 				}
 				if (Game.GameTime >= _corpseBombAt && _corpseBombAt > 0) {
 					//27 Explode and body burns
-					World.AddExplosion(_theBray.Position, 27, 15f, 1.5f);
+					World.AddExplosion(_theBray.Position, 27, 20f, 1.5f);
 					_theBray = null;
 					_corpseBombAt = 0;
 				}
@@ -119,7 +119,7 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
-				CreateBray();
+				CreateBray(50);
 			}
 
 			if (e.KeyCode == Keys.F14) { }
@@ -140,7 +140,15 @@ namespace Bray {
 				Skedaddle();
 			}
 
-			
+			if (e.KeyCode == Keys.F19) {
+				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
+				World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
+				TASK.TASK_COMBAT_HATED_TARGETS_AROUND_PED(_theBray.Handle, 300, 33554432, 16);
+				var blip = _theBray.GetBlip;
+				MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+			}
+
+
 		}
 
 		private void OnKeyUp(object sender, KeyEventArgs e) {
@@ -164,16 +172,16 @@ namespace Bray {
 			_theBray.Position = new Vector3 {
 				X = Game.Player.Ped.Position.X + rand.Next(-1 * maxDistance, maxDistance),
 				Y = Game.Player.Ped.Position.Y + rand.Next(-1 * maxDistance, maxDistance),
-				Z = -200
+				Z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
 			};
 		}
 
-		public void CreateBray() {
+		public void CreateBray(int radius) {
 
 			var spawnPoint = new Vector3 {
-				X = Game.Player.Ped.Position.X + rand.Next(-50, 50),
-				Y = Game.Player.Ped.Position.Y + rand.Next(-50, 50),
-				Z = -200
+				X = Game.Player.Ped.Position.X + rand.Next(radius * -1, radius),
+				Y = Game.Player.Ped.Position.Y + rand.Next(radius * -1, radius),
+				Z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
 			};
 			//log.Add($"Player Position: {Game.Player.Ped.Position.X}, {Game.Player.Ped.Position.Y}, {Game.Player.Ped.Position.Z}");
 			//log.Add($"Spawn Position: {spawnPoint.X}, {spawnPoint.Y}, {spawnPoint.Z}");
@@ -192,7 +200,14 @@ namespace Bray {
 
 		public void Hunt(float searchRadius) {
 			World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
-			PED.REGISTER_TARGET(_theBray.Handle, Game.Player.Ped.Handle, false);
+			
+			//33% chance Bray will target any gang member instead of just Arthur/John
+			if (rand.Next(0, 3) == 0) {
+				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
+			} else {
+				PED.REGISTER_TARGET(_theBray.Handle, Game.Player.Ped.Handle, false);
+			}
+
 			TASK.TASK_COMBAT_HATED_TARGETS_AROUND_PED(_theBray.Handle, searchRadius, 33554432, 16);
 			var blip = _theBray.GetBlip;
 			MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
