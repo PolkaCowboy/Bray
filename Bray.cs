@@ -49,30 +49,10 @@ namespace Bray {
 			_debug = string.Empty;
 
 			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
-				CreateBray(Game.Player.Ped.IsInTrain ? 2 : 50);
+				CreateBray(Game.Player.Ped.IsInTrain ? 2 : 65);
 			}
 
 			if (_theBray != null) {
-
-				if (pressedKeys.Contains(Keys.F10) || pressedKeys.Contains(Keys.F14)) {
-					//CAM.FORCE_CINEMATIC_RENDERING_THIS_UPDATE(true);
-					//CAM.CINEMATIC_LOCATION_OVERRIDE_TARGET_ENTITY_THIS_UPDATE("Cam", _theBray.Handle);
-					CAM._FORCE_CINEMATIC_DEATH_CAM_ON_PED(_theBray.Handle);
-					RDR2.UI.Screen.StopAllEffects();
-				}
-
-				if (!_truce && !PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())) {
-					Hunt(2000);
-				}
-
-				if (MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false) > 150) {
-					ComeToDaddy(Game.Player.Ped.IsInTrain ? 2 : 20);
-				}
-
-				if (Game.Player.IsDead) {
-					SetBrayMaxHealth();
-				}
-
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
 				//AddDebugMessage(() => $"Relationship With Ped Bray->Me: {_theBray.GetRelationshipWithPed(Game.Player.Ped)}\n");
 				//AddDebugMessage(() => $"Relationship With Ped Me->Bray: {Game.Player.Ped.GetRelationshipWithPed(_theBray)}\n");
@@ -81,18 +61,43 @@ namespace Bray {
 				AddDebugMessage(() => $"On Train: {Game.Player.Ped.IsInTrain}\n");
 				AddDebugMessage(() => $"In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
-				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}");
-				if (_corpseBombAt > 0) { AddDebugMessage(() => $"Bomb in {_corpseBombAt - Game.GameTime}\n"); }
+				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
 
 
-				if (_theBray.IsDead && _corpseBombAt == 0) {
-					_corpseBombAt = Game.GameTime + _corpseBombTimer;
-				}
-				if (Game.GameTime >= _corpseBombAt && _corpseBombAt > 0) {
-					//27 Explode and body burns
-					World.AddExplosion(_theBray.Position, 27, 20f, 1.5f);
-					_theBray = null;
-					_corpseBombAt = 0;
+				if (_theBray.IsAlive) {
+					AddDebugMessage(() => $"Bray is Alive\n");
+					if (pressedKeys.Contains(Keys.F10) || pressedKeys.Contains(Keys.F14)) {
+						//CAM.FORCE_CINEMATIC_RENDERING_THIS_UPDATE(true);
+						//CAM.CINEMATIC_LOCATION_OVERRIDE_TARGET_ENTITY_THIS_UPDATE("Cam", _theBray.Handle);
+						CAM._FORCE_CINEMATIC_DEATH_CAM_ON_PED(_theBray.Handle);
+						RDR2.UI.Screen.StopAllEffects();
+					}
+
+					if (!_truce && !PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())) {
+						Hunt(2000);
+					}
+
+					if (MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false) > 150) {
+						ComeToDaddy(Game.Player.Ped.IsInTrain ? 2 : 20);
+					}
+
+					if (Game.Player.IsDead) {
+						SetBrayMaxHealth();
+					}
+				} else {
+					AddDebugMessage(() => $"Bray is Dead\n");
+
+					if (_corpseBombAt > 0) { AddDebugMessage(() => $"Bomb in {_corpseBombAt - Game.GameTime}\n"); }
+
+					if (_corpseBombAt == 0) {
+						_corpseBombAt = Game.GameTime + _corpseBombTimer;
+					}
+					if (Game.GameTime >= _corpseBombAt && _corpseBombAt > 0) {
+						//27 Explode and body burns
+						World.AddExplosion(_theBray.Position, 27, 20f, 1.5f);
+						_theBray = null;
+						_corpseBombAt = 0;
+					}
 				}
 
 			} else {
@@ -200,7 +205,7 @@ namespace Bray {
 
 		public void Hunt(float searchRadius) {
 			World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
-			
+
 			//33% chance Bray will target any gang member instead of just Arthur/John
 			if (rand.Next(0, 3) == 0) {
 				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
