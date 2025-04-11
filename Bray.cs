@@ -10,7 +10,7 @@ using System.Windows.Forms;
 namespace Bray {
 	public class Bray : Script {
 		private string _debug;
-		private bool showDebug = false;
+		private bool showDebug = true;
 		private List<Keys> pressedKeys = new List<Keys>();
 		private string _brayString = "CS_AberdeenPigFarmer";
 		private List<string> log = new List<string>();
@@ -49,7 +49,10 @@ namespace Bray {
 			_debug = string.Empty;
 
 			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
-				CreateBray(Game.Player.Ped.IsInTrain ? 2 : 65);
+				CreateBray(
+					Game.Player.Ped.IsInTrain ? 1 : 20,
+					Game.Player.Ped.IsInTrain ? 2 : 65
+				);
 			}
 
 			if (_theBray != null) {
@@ -76,7 +79,10 @@ namespace Bray {
 					}
 
 					if (MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false) > 150) {
-						ComeToDaddy(Game.Player.Ped.IsInTrain ? 2 : 20);
+						ComeToDaddy(
+							Game.Player.Ped.IsInTrain ? 1 : 15,
+							Game.Player.Ped.IsInTrain ? 1 : 30
+						);
 					}
 
 					if (Game.Player.IsDead) {
@@ -122,7 +128,10 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
-				CreateBray(50);
+				CreateBray(
+					Game.Player.Ped.IsInTrain ? 1 : 20,
+					Game.Player.Ped.IsInTrain ? 2 : 65
+				);
 			}
 
 			if (e.KeyCode == Keys.F14) { }
@@ -132,7 +141,7 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F15) {
-				ComeToDaddy(3);
+				ComeToDaddy(1, 3);
 			}
 
 			if (e.KeyCode == Keys.F18) {
@@ -144,11 +153,7 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F19) {
-				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
-				World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
-				TASK.TASK_COMBAT_HATED_TARGETS_AROUND_PED(_theBray.Handle, 300, 33554432, 16);
-				var blip = _theBray.GetBlip;
-				MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+				showDebug = !showDebug;
 			}
 
 
@@ -171,26 +176,17 @@ namespace Bray {
 			_truce = false;
 		}
 
-		public void ComeToDaddy(int maxDistance) {
-			_theBray.Position = new Vector3 {
-				X = Game.Player.Ped.Position.X + rand.Next(-1 * maxDistance, maxDistance),
-				Y = Game.Player.Ped.Position.Y + rand.Next(-1 * maxDistance, maxDistance),
-				Z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
-			};
+		public void ComeToDaddy(int minDistance, int maxDistance) {
+			_theBray.Position = GetSpawnPoint(minDistance, maxDistance);
 		}
 
-		public void CreateBray(int radius) {
+		public void CreateBray(int minDistance, int maxDistance) {
 
-			var spawnPoint = new Vector3 {
-				X = Game.Player.Ped.Position.X + rand.Next(radius * -1, radius),
-				Y = Game.Player.Ped.Position.Y + rand.Next(radius * -1, radius),
-				Z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
-			};
 			//log.Add($"Player Position: {Game.Player.Ped.Position.X}, {Game.Player.Ped.Position.Y}, {Game.Player.Ped.Position.Z}");
 			//log.Add($"Spawn Position: {spawnPoint.X}, {spawnPoint.Y}, {spawnPoint.Z}");
 
 
-			_theBray = World.CreatePed(PedHash.cs_aberdeenpigfarmer, spawnPoint, 0);
+			_theBray = World.CreatePed(PedHash.cs_aberdeenpigfarmer, GetSpawnPoint(minDistance, maxDistance), 0);
 			_theBray.RelationshipGroup = _braylationship;
 			SetBrayMaxHealth();
 			_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
@@ -201,12 +197,30 @@ namespace Bray {
 
 		}
 
+		public Vector3 GetSpawnPoint(int minDistance, int maxDistance) {
+			log = new List<string>();
+			var x = rand.Next(minDistance, maxDistance);
+			x = rand.Next(0, 2) == 0 ? x * -1 : x;
+			var y = rand.Next(minDistance, maxDistance);
+			y = rand.Next(0, 2) == 0 ? y * -1 : y;
+			var z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200;
+			log = new List<string> {
+				$"Spawning at X:{x}, Y:{y}, Z:{z}"
+			};
+			return new Vector3 {
+				X = x,
+				Y = y,
+				Z = z
+			};
+
+		}
+
 		public void Hunt(float searchRadius) {
 			World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
 
 			//33% chance Bray will target any gang member instead of just Arthur/John
-			if (rand.Next(0, 3) == 0) {
-				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
+			if (rand.Next(0, 9) == 0) {
+				//TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
 			} else {
 				PED.REGISTER_TARGET(_theBray.Handle, Game.Player.Ped.Handle, false);
 			}
