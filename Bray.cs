@@ -144,11 +144,7 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F19) {
-				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
-				World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
-				TASK.TASK_COMBAT_HATED_TARGETS_AROUND_PED(_theBray.Handle, 300, 33554432, 16);
-				var blip = _theBray.GetBlip;
-				MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+				showDebug = !showDebug;
 			}
 
 
