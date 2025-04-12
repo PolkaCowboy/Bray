@@ -5,6 +5,7 @@ using RDR2.UI;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 
 namespace Bray {
@@ -19,13 +20,25 @@ namespace Bray {
 		uint _braylationship = 0;
 		private bool _truce = false;
 
+		private int _defaultMinSpawnDistance = 15;
+		private int _defaultMaxSpawnDistance = 50;
+
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
+
+		private int _nextStealthSpawn = 0;
+		private int _stealthSpawnMinMinutes = 6;
+		private int _stealthSpawnMaxMinutes = 25;
+
+		//Brays will just keep spawning if we don't wait a few seconds to check for next eligable "in combat" spawn.
+		private int _combatCoolDownEnd = 0;
+		private int _combatCoolDownStart = 0;
+		private bool _canSpawnFromCombatThisFrame = false;
+
 
 		/* Ideas */
 		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free roam
 		//TODO: Add a law cat with the Wanted spawns
-		//TODO: Spawn whenever Arthur enters combat
 		//TODO: Can I add random hats?
 		//TODO: Can the mod log bray & arthur deaths per mission?
 		//TODO: Add a small grace period after hitting the Come to Daddy Button
@@ -47,10 +60,35 @@ namespace Bray {
 
 		private void OnTick(object sender, EventArgs evt) {
 			_debug = string.Empty;
+			_canSpawnFromCombatThisFrame = CanSpawnFromCombat();
 
-			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
-				CreateBray(Game.Player.Ped.IsInTrain ? 2 : 65);
+			if (Game.Player.Ped.IsInCombat) {
+				_combatCoolDownEnd = Game.GameTime + 3000;
 			}
+
+			if (_nextStealthSpawn <= 0) {
+				_nextStealthSpawn = Game.GameTime + rand.Next(_stealthSpawnMinMinutes * 60000, _stealthSpawnMaxMinutes * 60000);
+			}
+
+			AddDebugMessage(() => $"Game Time: {Game.GameTime}\n");
+			//AddDebugMessage(() => $"Next Stealth Spawn: {_nextStealthSpawn}\n");
+			//AddDebugMessage(() => $"Stealth Spawn In: {(_nextStealthSpawn - Game.GameTime) / 600}\n");
+
+			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}\n");
+			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}, Cooldown: {_combatCoolDownEnd}, Can Spawn From Combat: {_canSpawnFromCombatThisFrame}\n");
+			//AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
+
+			AddDebugMessage(() => $"{_theBray == null} && ({MISC.GET_MISSION_FLAG()} || {Game.Player.IsWanted} || ({_canSpawnFromCombatThisFrame} && {Game.Player.Ped.IsInCombat})\n");
+			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted || (_canSpawnFromCombatThisFrame && Game.Player.Ped.IsInCombat))) {
+				CreateBray(
+					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
+				);
+			} else if (_theBray == null && Game.GameTime > _nextStealthSpawn && !MISC.GET_MISSION_FLAG()) {
+				CreateBray(_defaultMinSpawnDistance, _defaultMaxSpawnDistance, true);
+			}
+
+
 
 			if (_theBray != null) {
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
@@ -58,7 +96,7 @@ namespace Bray {
 				//AddDebugMessage(() => $"Relationship With Ped Me->Bray: {Game.Player.Ped.GetRelationshipWithPed(_theBray)}\n");
 				//AddDebugMessage(() => $"Ped Ids: {PLAYER.PLAYER_PED_ID()}, {Game.Player.Ped.Handle}\n");
 				//AddDebugMessage(() => $"Bray Handle: {_theBray.Handle}\n");
-				AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
+
 				AddDebugMessage(() => $"Bray In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
@@ -76,7 +114,10 @@ namespace Bray {
 					}
 
 					if (MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false) > 150) {
-						ComeToDaddy(Game.Player.Ped.IsInTrain ? 2 : 20);
+						ComeToDaddy(
+							Game.Player.Ped.IsInTrain ? 1 : 15,
+							Game.Player.Ped.IsInTrain ? 1 : 30
+						);
 					}
 
 					if (Game.Player.IsDead) {
@@ -122,7 +163,11 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
-				CreateBray(50);
+				CreateBray(
+					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance,
+					true
+				);
 			}
 
 			if (e.KeyCode == Keys.F14) { }
@@ -132,7 +177,7 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F15) {
-				ComeToDaddy(3);
+				ComeToDaddy(1, 3);
 			}
 
 			if (e.KeyCode == Keys.F18) {
@@ -167,49 +212,62 @@ namespace Bray {
 			_truce = false;
 		}
 
-		public void ComeToDaddy(int maxDistance) {
-			_theBray.Position = new Vector3 {
-				X = Game.Player.Ped.Position.X + rand.Next(-1 * maxDistance, maxDistance),
-				Y = Game.Player.Ped.Position.Y + rand.Next(-1 * maxDistance, maxDistance),
-				Z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
-			};
+		public void ComeToDaddy(int minDistance, int maxDistance) {
+			_theBray.Position = GetSpawnPoint(minDistance, maxDistance);
 		}
 
-		public void CreateBray(int radius) {
+		public void CreateBray(int minDistance, int maxDistance, bool stealthSpawn = false) {
 
-			var spawnPoint = new Vector3 {
-				X = Game.Player.Ped.Position.X + rand.Next(radius * -1, radius),
-				Y = Game.Player.Ped.Position.Y + rand.Next(radius * -1, radius),
-				Z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
-			};
 			//log.Add($"Player Position: {Game.Player.Ped.Position.X}, {Game.Player.Ped.Position.Y}, {Game.Player.Ped.Position.Z}");
 			//log.Add($"Spawn Position: {spawnPoint.X}, {spawnPoint.Y}, {spawnPoint.Z}");
 
 
-			_theBray = World.CreatePed(PedHash.cs_aberdeenpigfarmer, spawnPoint, 0);
+			_theBray = World.CreatePed(PedHash.cs_aberdeenpigfarmer, GetSpawnPoint(minDistance, maxDistance), 0);
 			_theBray.RelationshipGroup = _braylationship;
 			SetBrayMaxHealth();
-			_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
+			if (!stealthSpawn) {
+				_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
+			}
 
 			//PED.SET_PED_AS_GROUP_MEMBER(_theBray.Handle, _playerGroup);
 
-			Hunt(300);
+			Hunt(300, stealthSpawn);
 
 		}
 
-		public void Hunt(float searchRadius) {
+		public Vector3 GetSpawnPoint(int minDistance, int maxDistance) {
+			var x = rand.Next(minDistance, maxDistance);
+			x = rand.Next(0, 2) == 0 ? x * -1 : x;
+			var y = rand.Next(minDistance, maxDistance);
+			y = rand.Next(0, 2) == 0 ? y * -1 : y;
+
+			log = new List<string> {
+				$"Offset: {x}, {y}"
+			};
+
+			return new Vector3(
+				Game.Player.Ped.Position.X + x,
+				Game.Player.Ped.Position.Y + y,
+				Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
+			);
+
+		}
+
+		public void Hunt(float searchRadius, bool stealth = false) {
 			World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
 
 			//33% chance Bray will target any gang member instead of just Arthur/John
-			if (rand.Next(0, 3) == 0) {
-				TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
+			if (rand.Next(0, 3) == 0 && !stealth) {
+				//TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
 			} else {
 				PED.REGISTER_TARGET(_theBray.Handle, Game.Player.Ped.Handle, false);
 			}
 
 			TASK.TASK_COMBAT_HATED_TARGETS_AROUND_PED(_theBray.Handle, searchRadius, 33554432, 16);
-			var blip = _theBray.GetBlip;
-			MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+			if (!stealth) {
+				var blip = _theBray.GetBlip;
+				MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+			}
 		}
 
 		public void EndTheHate() {
@@ -223,6 +281,10 @@ namespace Bray {
 		public void SetBrayMaxHealth() {
 			_theBray.MaxHealth = 225;
 			_theBray.Health = 225;
+		}
+
+		private bool CanSpawnFromCombat() {
+			return !MISC.GET_MISSION_FLAG() && (Game.GameTime > _combatCoolDownEnd);
 		}
 
 		public void AddDebugMessage(Func<string> message) {
