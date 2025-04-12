@@ -10,7 +10,7 @@ using System.Windows.Forms;
 namespace Bray {
 	public class Bray : Script {
 		private string _debug;
-		private bool showDebug = true;
+		private bool showDebug = false;
 		private List<Keys> pressedKeys = new List<Keys>();
 		private string _brayString = "CS_AberdeenPigFarmer";
 		private List<string> log = new List<string>();
@@ -18,6 +18,9 @@ namespace Bray {
 		Ped _theBray = null;
 		uint _braylationship = 0;
 		private bool _truce = false;
+
+		private int _defaultMinSpawnDistance = 15;
+		private int _defaultMaxSpawnDistance = 50;
 
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
@@ -48,10 +51,13 @@ namespace Bray {
 		private void OnTick(object sender, EventArgs evt) {
 			_debug = string.Empty;
 
-			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
+			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}");
+			//AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
+
+			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted || (!MISC.GET_MISSION_FLAG() && Game.Player.Ped.IsInCombat))) {
 				CreateBray(
-					Game.Player.Ped.IsInTrain ? 1 : 20,
-					Game.Player.Ped.IsInTrain ? 2 : 65
+					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
 				);
 			}
 
@@ -61,7 +67,7 @@ namespace Bray {
 				//AddDebugMessage(() => $"Relationship With Ped Me->Bray: {Game.Player.Ped.GetRelationshipWithPed(_theBray)}\n");
 				//AddDebugMessage(() => $"Ped Ids: {PLAYER.PLAYER_PED_ID()}, {Game.Player.Ped.Handle}\n");
 				//AddDebugMessage(() => $"Bray Handle: {_theBray.Handle}\n");
-				AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
+				
 				AddDebugMessage(() => $"Bray In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
@@ -129,8 +135,8 @@ namespace Bray {
 
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
 				CreateBray(
-					Game.Player.Ped.IsInTrain ? 1 : 20,
-					Game.Player.Ped.IsInTrain ? 2 : 65
+					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
 				);
 			}
 
@@ -198,20 +204,20 @@ namespace Bray {
 		}
 
 		public Vector3 GetSpawnPoint(int minDistance, int maxDistance) {
-			log = new List<string>();
 			var x = rand.Next(minDistance, maxDistance);
 			x = rand.Next(0, 2) == 0 ? x * -1 : x;
 			var y = rand.Next(minDistance, maxDistance);
 			y = rand.Next(0, 2) == 0 ? y * -1 : y;
-			var z = Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200;
+
 			log = new List<string> {
-				$"Spawning at X:{x}, Y:{y}, Z:{z}"
+				$"Offset: {x}, {y}"
 			};
-			return new Vector3 {
-				X = x,
-				Y = y,
-				Z = z
-			};
+
+			return new Vector3(
+				Game.Player.Ped.Position.X + x,
+				Game.Player.Ped.Position.Y + y,
+				Game.Player.Ped.IsInTrain ? Game.Player.Ped.Position.Z : -200
+			);
 
 		}
 
