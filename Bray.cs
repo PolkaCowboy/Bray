@@ -5,6 +5,7 @@ using RDR2.UI;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 
 namespace Bray {
@@ -25,10 +26,19 @@ namespace Bray {
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
 
+		private int _nextStealthSpawn = 0;
+		private int _stealthSpawnMinMinutes = 6;
+		private int _stealthSpawnMaxMinutes = 25;
+
+		//Brays will just keep spawning if we don't wait a few seconds to check for next eligable "in combat" spawn.
+		private int _combatCoolDownEnd = 0;
+		private int _combatCoolDownStart = 0;
+		private bool _canSpawnFromCombatThisFrame = false;
+
+
 		/* Ideas */
 		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free roam
 		//TODO: Add a law cat with the Wanted spawns
-		//TODO: Spawn whenever Arthur enters combat
 		//TODO: Can I add random hats?
 		//TODO: Can the mod log bray & arthur deaths per mission?
 		//TODO: Add a small grace period after hitting the Come to Daddy Button
@@ -50,16 +60,35 @@ namespace Bray {
 
 		private void OnTick(object sender, EventArgs evt) {
 			_debug = string.Empty;
+			_canSpawnFromCombatThisFrame = CanSpawnFromCombat();
 
-			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}");
+			if (Game.Player.Ped.IsInCombat) {
+				_combatCoolDownEnd = Game.GameTime + 3000;
+			}
+
+			if (_nextStealthSpawn <= 0) {
+				_nextStealthSpawn = Game.GameTime + rand.Next(_stealthSpawnMinMinutes * 60000, _stealthSpawnMaxMinutes * 60000);
+			}
+
+			AddDebugMessage(() => $"Game Time: {Game.GameTime}\n");
+			//AddDebugMessage(() => $"Next Stealth Spawn: {_nextStealthSpawn}\n");
+			//AddDebugMessage(() => $"Stealth Spawn In: {(_nextStealthSpawn - Game.GameTime) / 600}\n");
+
+			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}\n");
+			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}, Cooldown: {_combatCoolDownEnd}, Can Spawn From Combat: {_canSpawnFromCombatThisFrame}\n");
 			//AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
 
-			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted || (!MISC.GET_MISSION_FLAG() && Game.Player.Ped.IsInCombat))) {
+			AddDebugMessage(() => $"{_theBray == null} && ({MISC.GET_MISSION_FLAG()} || {Game.Player.IsWanted} || ({_canSpawnFromCombatThisFrame} && {Game.Player.Ped.IsInCombat})\n");
+			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted || (_canSpawnFromCombatThisFrame && Game.Player.Ped.IsInCombat))) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
 					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
 				);
+			} else if (_theBray == null && Game.GameTime > _nextStealthSpawn && !MISC.GET_MISSION_FLAG()) {
+				CreateBray(_defaultMinSpawnDistance, _defaultMaxSpawnDistance, true);
 			}
+
+
 
 			if (_theBray != null) {
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
@@ -67,7 +96,7 @@ namespace Bray {
 				//AddDebugMessage(() => $"Relationship With Ped Me->Bray: {Game.Player.Ped.GetRelationshipWithPed(_theBray)}\n");
 				//AddDebugMessage(() => $"Ped Ids: {PLAYER.PLAYER_PED_ID()}, {Game.Player.Ped.Handle}\n");
 				//AddDebugMessage(() => $"Bray Handle: {_theBray.Handle}\n");
-				
+
 				AddDebugMessage(() => $"Bray In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
@@ -136,7 +165,8 @@ namespace Bray {
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
-					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance,
+					true
 				);
 			}
 
@@ -186,7 +216,7 @@ namespace Bray {
 			_theBray.Position = GetSpawnPoint(minDistance, maxDistance);
 		}
 
-		public void CreateBray(int minDistance, int maxDistance) {
+		public void CreateBray(int minDistance, int maxDistance, bool stealthSpawn = false) {
 
 			//log.Add($"Player Position: {Game.Player.Ped.Position.X}, {Game.Player.Ped.Position.Y}, {Game.Player.Ped.Position.Z}");
 			//log.Add($"Spawn Position: {spawnPoint.X}, {spawnPoint.Y}, {spawnPoint.Z}");
@@ -195,11 +225,13 @@ namespace Bray {
 			_theBray = World.CreatePed(PedHash.cs_aberdeenpigfarmer, GetSpawnPoint(minDistance, maxDistance), 0);
 			_theBray.RelationshipGroup = _braylationship;
 			SetBrayMaxHealth();
-			_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
+			if (!stealthSpawn) {
+				_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
+			}
 
 			//PED.SET_PED_AS_GROUP_MEMBER(_theBray.Handle, _playerGroup);
 
-			Hunt(300);
+			Hunt(300, stealthSpawn);
 
 		}
 
@@ -221,19 +253,21 @@ namespace Bray {
 
 		}
 
-		public void Hunt(float searchRadius) {
+		public void Hunt(float searchRadius, bool stealth = false) {
 			World.SetRelationshipBetweenGroups(eRelationshipType.Hate, _braylationship, Game.Player.Ped.RelationshipGroup);
 
 			//33% chance Bray will target any gang member instead of just Arthur/John
-			if (rand.Next(0, 9) == 0) {
+			if (rand.Next(0, 3) == 0 && !stealth) {
 				//TASK.CLEAR_PED_TASKS_IMMEDIATELY(_theBray.Handle, true, true);
 			} else {
 				PED.REGISTER_TARGET(_theBray.Handle, Game.Player.Ped.Handle, false);
 			}
 
 			TASK.TASK_COMBAT_HATED_TARGETS_AROUND_PED(_theBray.Handle, searchRadius, 33554432, 16);
-			var blip = _theBray.GetBlip;
-			MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+			if (!stealth) {
+				var blip = _theBray.GetBlip;
+				MAP._BLIP_SET_STYLE(blip, (uint)BlipType.BLIP_STYLE_ENEMY_SEVERE);
+			}
 		}
 
 		public void EndTheHate() {
@@ -247,6 +281,10 @@ namespace Bray {
 		public void SetBrayMaxHealth() {
 			_theBray.MaxHealth = 225;
 			_theBray.Health = 225;
+		}
+
+		private bool CanSpawnFromCombat() {
+			return !MISC.GET_MISSION_FLAG() && (Game.GameTime > _combatCoolDownEnd);
 		}
 
 		public void AddDebugMessage(Func<string> message) {
