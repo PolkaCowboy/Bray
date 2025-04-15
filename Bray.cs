@@ -27,14 +27,8 @@ namespace Bray {
 		private int _corpseBombAt = 0;
 
 		private int _nextStealthSpawn = 0;
-		private int _stealthSpawnMinMinutes = 6;
-		private int _stealthSpawnMaxMinutes = 25;
-
-		//Brays will just keep spawning if we don't wait a few seconds to check for next eligable "in combat" spawn.
-		private int _combatCoolDownEnd = 0;
-		private int _combatCoolDownStart = 0;
-		private bool _canSpawnFromCombatThisFrame = false;
-
+		private int _stealthSpawnMinMinutes = 1;
+		private int _stealthSpawnMaxMinutes = 10;
 
 		/* Ideas */
 		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free roam
@@ -47,11 +41,6 @@ namespace Bray {
 
 			_braylationship = World.AddRelationshipGroup($"Braylationship");
 
-			//var playerGroup = PED.CREATE_GROUP(0);
-			//PED.SET_PED_AS_GROUP_MEMBER(Game.Player.Ped.Handle, playerGroup);
-			//PED.SET_PED_AS_GROUP_LEADER(Game.Player.Ped.Handle, playerGroup, true);
-
-
 			Tick += OnTick;
 			KeyDown += OnKeyDown;
 			KeyUp += OnKeyUp;
@@ -60,11 +49,6 @@ namespace Bray {
 
 		private void OnTick(object sender, EventArgs evt) {
 			_debug = string.Empty;
-			_canSpawnFromCombatThisFrame = CanSpawnFromCombat();
-
-			if (Game.Player.Ped.IsInCombat) {
-				_combatCoolDownEnd = Game.GameTime + 3000;
-			}
 
 			if (_nextStealthSpawn <= 0) {
 				_nextStealthSpawn = Game.GameTime + rand.Next(_stealthSpawnMinMinutes * 60000, _stealthSpawnMaxMinutes * 60000);
@@ -75,11 +59,10 @@ namespace Bray {
 			//AddDebugMessage(() => $"Stealth Spawn In: {(_nextStealthSpawn - Game.GameTime) / 600}\n");
 
 			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}\n");
-			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}, Cooldown: {_combatCoolDownEnd}, Can Spawn From Combat: {_canSpawnFromCombatThisFrame}\n");
+			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}\n");
 			//AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
 
-			AddDebugMessage(() => $"{_theBray == null} && ({MISC.GET_MISSION_FLAG()} || {Game.Player.IsWanted} || ({_canSpawnFromCombatThisFrame} && {Game.Player.Ped.IsInCombat})\n");
-			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted || (_canSpawnFromCombatThisFrame && Game.Player.Ped.IsInCombat))) {
+			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
 					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
@@ -87,8 +70,6 @@ namespace Bray {
 			} else if (_theBray == null && Game.GameTime > _nextStealthSpawn && !MISC.GET_MISSION_FLAG()) {
 				CreateBray(_defaultMinSpawnDistance, _defaultMaxSpawnDistance, true);
 			}
-
-
 
 			if (_theBray != null) {
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
@@ -162,22 +143,30 @@ namespace Bray {
 				pressedKeys.Add(e.KeyCode);
 			}
 
+			/* Debug Functions */
+
 			if (e.KeyCode == Keys.F13 && _theBray == null) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
 					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance,
-					true
+					false
 				);
 			}
+
+			if (e.KeyCode == Keys.F15) {
+				ComeToDaddy(1, 3);
+			}
+
+			if (e.KeyCode == Keys.F19) {
+				showDebug = !showDebug;
+			}
+
+			/* Mod Tools */
 
 			if (e.KeyCode == Keys.F14) { }
 
 			if (e.KeyCode == Keys.F16) {
 				Hunt(300);
-			}
-
-			if (e.KeyCode == Keys.F15) {
-				ComeToDaddy(1, 3);
 			}
 
 			if (e.KeyCode == Keys.F18) {
@@ -187,11 +176,6 @@ namespace Bray {
 			if (e.KeyCode == Keys.F17) {
 				Skedaddle();
 			}
-
-			if (e.KeyCode == Keys.F19) {
-				showDebug = !showDebug;
-			}
-
 
 		}
 
@@ -281,10 +265,6 @@ namespace Bray {
 		public void SetBrayMaxHealth() {
 			_theBray.MaxHealth = 225;
 			_theBray.Health = 225;
-		}
-
-		private bool CanSpawnFromCombat() {
-			return !MISC.GET_MISSION_FLAG() && (Game.GameTime > _combatCoolDownEnd);
 		}
 
 		public void AddDebugMessage(Func<string> message) {
