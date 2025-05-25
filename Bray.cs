@@ -19,6 +19,7 @@ namespace Bray {
 		Ped _theBray = null;
 		uint _braylationship = 0;
 		private bool _truce = false;
+		private bool _brayCanSpawn = true;
 
 		private int _defaultMinSpawnDistance = 15;
 		private int _defaultMaxSpawnDistance = 50;
@@ -55,8 +56,8 @@ namespace Bray {
 			}
 
 			AddDebugMessage(() => $"Game Time: {Game.GameTime}\n");
-			//AddDebugMessage(() => $"Next Stealth Spawn: {_nextStealthSpawn}\n");
-			//AddDebugMessage(() => $"Stealth Spawn In: {(_nextStealthSpawn - Game.GameTime) / 600}\n");
+			AddDebugMessage(() => $"Next Stealth Spawn: {_nextStealthSpawn}\n");
+			AddDebugMessage(() => $"Stealth Spawn In: {(_nextStealthSpawn - Game.GameTime) / 600}\n");
 
 			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}\n");
 			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}\n");
@@ -71,6 +72,10 @@ namespace Bray {
 				CreateBray(_defaultMinSpawnDistance, _defaultMaxSpawnDistance, true);
 			}
 
+			if (Game.GameTime > _nextStealthSpawn) {
+				_nextStealthSpawn = 0;
+			}
+
 			if (_theBray != null) {
 				//AddDebugMessage(() => $"Relationship Group: {_theBray.RelationshipGroup}\n");
 				//AddDebugMessage(() => $"Relationship With Ped Bray->Me: {_theBray.GetRelationshipWithPed(Game.Player.Ped)}\n");
@@ -82,7 +87,7 @@ namespace Bray {
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
 
-				if (pressedKeys.Contains(Keys.F10) || pressedKeys.Contains(Keys.F14)) {
+				if (pressedKeys.Contains(Keys.F10)) {
 					CAM._FORCE_CINEMATIC_DEATH_CAM_ON_PED(_theBray.Handle);
 					RDR2.UI.Screen.StopAllEffects();
 				}
@@ -163,7 +168,9 @@ namespace Bray {
 
 			/* Mod Tools */
 
-			if (e.KeyCode == Keys.F14) { }
+			if (e.KeyCode == Keys.F14) {
+				ToggleBray();
+			}
 
 			if (e.KeyCode == Keys.F16) {
 				Hunt(300);
@@ -201,7 +208,9 @@ namespace Bray {
 		}
 
 		public void CreateBray(int minDistance, int maxDistance, bool stealthSpawn = false) {
-
+			if (!_brayCanSpawn) {
+				return;
+			}
 			//log.Add($"Player Position: {Game.Player.Ped.Position.X}, {Game.Player.Ped.Position.Y}, {Game.Player.Ped.Position.Z}");
 			//log.Add($"Spawn Position: {spawnPoint.X}, {spawnPoint.Y}, {spawnPoint.Z}");
 
@@ -265,6 +274,15 @@ namespace Bray {
 		public void SetBrayMaxHealth() {
 			_theBray.MaxHealth = 225;
 			_theBray.Health = 225;
+		}
+
+		public void ToggleBray() {
+			_brayCanSpawn = !_brayCanSpawn;
+			if (_brayCanSpawn) {
+				RDR2.UI.Screen.DisplaySubtitle($"Bray can spawn.");
+			} else {
+				RDR2.UI.Screen.DisplaySubtitle($"Bray can NOT spawn.");
+			}
 		}
 
 		public void AddDebugMessage(Func<string> message) {
