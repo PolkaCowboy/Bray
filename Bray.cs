@@ -28,8 +28,8 @@ namespace Bray {
 		private int _corpseBombAt = 0;
 
 		private int _nextStealthSpawn = 0;
-		private int _stealthSpawnMinMinutes = 1;
-		private int _stealthSpawnMaxMinutes = 10;
+		private int _stealthSpawnMinMinutes = 6;
+		private int _stealthSpawnMaxMinutes = 15;
 
 		/* Ideas */
 		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free roam
