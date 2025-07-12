@@ -221,7 +221,7 @@ namespace Bray {
 			if (!stealthSpawn) {
 				_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
 			}
-
+			_theBray.SetPedPromptName("The Bray");
 			//PED.SET_PED_AS_GROUP_MEMBER(_theBray.Handle, _playerGroup);
 
 			Hunt(300, stealthSpawn);
