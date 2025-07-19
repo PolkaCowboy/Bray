@@ -4,6 +4,7 @@ using RDR2.Native;
 using RDR2.UI;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
@@ -21,8 +22,8 @@ namespace Bray {
 		private bool _truce = false;
 		private bool _brayCanSpawn = true;
 
-		private int _defaultMinSpawnDistance = 15;
-		private int _defaultMaxSpawnDistance = 50;
+		private int _defaultMinSpawnDistance = 35;
+		private int _defaultMaxSpawnDistance = 65;
 
 		private int _corpseBombTimer = 2000;
 		private int _corpseBombAt = 0;
@@ -32,12 +33,10 @@ namespace Bray {
 		private int _stealthSpawnMaxMinutes = 15;
 
 		/* Ideas */
-		//TODO: Bray with no blips randomly spawns every 5-20 minutes during free roam
 		//TODO: Add a law cat with the Wanted spawns
 		//TODO: Can I add random hats?
 		//TODO: Can the mod log bray & arthur deaths per mission?
-		//TODO: Add a small grace period after hitting the Come to Daddy Button
-
+		
 		public Bray() {
 
 			_braylationship = World.AddRelationshipGroup($"Braylationship");
@@ -63,10 +62,16 @@ namespace Bray {
 			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}\n");
 			//AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
 
-			if (_theBray == null && (MISC.GET_MISSION_FLAG() || Game.Player.IsWanted)) {
+			if (_theBray == null && MISC.GET_MISSION_FLAG()) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
 					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
+				);
+			} else if(_theBray == null && Game.Player.IsWanted) {
+				CreateBray(
+					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance, 
+					displayName: "The LAW Bray"
 				);
 			} else if (_theBray == null && Game.GameTime > _nextStealthSpawn && !MISC.GET_MISSION_FLAG()) {
 				CreateBray(_defaultMinSpawnDistance, _defaultMaxSpawnDistance, true);
@@ -207,7 +212,7 @@ namespace Bray {
 			_theBray.Position = GetSpawnPoint(minDistance, maxDistance);
 		}
 
-		public void CreateBray(int minDistance, int maxDistance, bool stealthSpawn = false) {
+		public void CreateBray(int minDistance, int maxDistance, bool stealthSpawn = false, string displayName = "The Bray") {
 			if (!_brayCanSpawn) {
 				return;
 			}
@@ -221,7 +226,7 @@ namespace Bray {
 			if (!stealthSpawn) {
 				_theBray.AddBlip(BlipType.BLIP_STYLE_NEUTRAL);
 			}
-			_theBray.SetPedPromptName("The Bray");
+			_theBray.SetPedPromptName(displayName);
 			//PED.SET_PED_AS_GROUP_MEMBER(_theBray.Handle, _playerGroup);
 
 			Hunt(300, stealthSpawn);
