@@ -1,6 +1,7 @@
 ﻿using RDR2;
 using RDR2.Math;
 using RDR2.Native;
+using RDR2.NaturalMotion;
 using RDR2.UI;
 using System;
 using System.Collections.Generic;
@@ -25,8 +26,13 @@ namespace Bray {
 		private int _defaultMinSpawnDistance = 35;
 		private int _defaultMaxSpawnDistance = 65;
 
-		private int _corpseBombTimer = 2000;
+		private int _corpseBombTimerMax = 4000;
+		private int _corpseBombTimerMin = 0;
+		private float _corpseBombRadius = 0;
 		private int _corpseBombAt = 0;
+
+		private int _lastCorpseBombDelay = 0;
+		private string _lastCorpseBombType = "";
 
 		private int _nextStealthSpawn = 0;
 		private int _stealthSpawnMinMinutes = 6;
@@ -36,7 +42,7 @@ namespace Bray {
 		//TODO: Add a law cat with the Wanted spawns
 		//TODO: Can I add random hats?
 		//TODO: Can the mod log bray & arthur deaths per mission?
-		
+
 		public Bray() {
 
 			_braylationship = World.AddRelationshipGroup($"Braylationship");
@@ -61,16 +67,19 @@ namespace Bray {
 			AddDebugMessage(() => $"In Mission: {MISC.GET_MISSION_FLAG()}\n");
 			AddDebugMessage(() => $"In Combat: {Game.Player.Ped.IsInCombat}\n");
 			//AddDebugMessage(() => $"Player On Train: {Game.Player.Ped.IsInTrain}\n");
+			AddDebugMessage(() => $"Last Bomb Delay: {_lastCorpseBombDelay}\n");
+			AddDebugMessage(() => $"Last Bomb Radius: {_corpseBombRadius}\n");
+			AddDebugMessage(() => $"Last Bomb Type: {_lastCorpseBombType}\n");
 
 			if (_theBray == null && MISC.GET_MISSION_FLAG()) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
 					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance
 				);
-			} else if(_theBray == null && Game.Player.IsWanted) {
+			} else if (_theBray == null && Game.Player.IsWanted) {
 				CreateBray(
 					Game.Player.Ped.IsInTrain ? 1 : _defaultMinSpawnDistance,
-					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance, 
+					Game.Player.Ped.IsInTrain ? 2 : _defaultMaxSpawnDistance,
 					displayName: "The LAW Bray"
 				);
 			} else if (_theBray == null && Game.GameTime > _nextStealthSpawn && !MISC.GET_MISSION_FLAG()) {
@@ -91,6 +100,8 @@ namespace Bray {
 				AddDebugMessage(() => $"Bray In Combat: {PED.IS_PED_IN_COMBAT(_theBray.Handle, PLAYER.PLAYER_PED_ID())}\n");
 				AddDebugMessage(() => $"Position: {_theBray.Position.X}, {_theBray.Position.Y}, {_theBray.Position.Z}\n");
 				AddDebugMessage(() => $"Distance: {MISC.GET_DISTANCE_BETWEEN_COORDS(Game.Player.Ped.Position, _theBray.Position, false)}\n");
+
+				
 
 				if (pressedKeys.Contains(Keys.F10)) {
 					CAM._FORCE_CINEMATIC_DEATH_CAM_ON_PED(_theBray.Handle);
@@ -120,11 +131,17 @@ namespace Bray {
 					if (_corpseBombAt > 0) { AddDebugMessage(() => $"Bomb in {_corpseBombAt - Game.GameTime}\n"); }
 
 					if (_corpseBombAt == 0) {
-						_corpseBombAt = Game.GameTime + _corpseBombTimer;
+						_lastCorpseBombDelay = rand.Next(_corpseBombTimerMin, _corpseBombTimerMax);
+						_corpseBombRadius = GetRandomFloat(1f, 2f) + (_lastCorpseBombDelay / 1000);
+						_corpseBombAt = Game.GameTime + _lastCorpseBombDelay;
 					}
 					if (Game.GameTime >= _corpseBombAt && _corpseBombAt > 0) {
-						//27 Explode and body burns
-						World.AddExplosion(_theBray.Position, 27, 20f, 1.5f);
+
+						DetonateBomb();
+						//World.AddExplosion(_theBray.Position, (int)ExplosionTypes.SmallLoudSound, 5f, 1.5f);
+						//World.AddExplosion(_theBray.Position, (int)ExplosionTypes.OnlySound, 1f, 0f);
+						//World.AddExplosion(_theBray.Position, (int)ExplosionTypes.FireWork, 1f, 0f);
+
 						_theBray = null;
 						_corpseBombAt = 0;
 					}
@@ -164,7 +181,7 @@ namespace Bray {
 			}
 
 			if (e.KeyCode == Keys.F15) {
-				ComeToDaddy(1, 3);
+				ComeToDaddy(5, 10);
 			}
 
 			if (e.KeyCode == Keys.F19) {
@@ -187,6 +204,10 @@ namespace Bray {
 
 			if (e.KeyCode == Keys.F17) {
 				Skedaddle();
+			}
+
+			if (e.KeyCode == Keys.F20) {
+				//World.AddExplosion(Game.Player.Ped.Position, (int)ExplosionTypes.BigSloMo, 5f, 1.5f);
 			}
 
 		}
@@ -294,6 +315,71 @@ namespace Bray {
 			if (showDebug) {
 				_debug += message();
 			}
+		}
+
+		public static float GetRandomFloat(float min = 0.5f, float max = 2.0f) {
+			Random rand = new Random();
+			double range = max - min;
+			return (float)(min + rand.NextDouble() * range);
+		}
+
+		private void DetonateBomb() {
+			if (_lastCorpseBombDelay <= 1250) {
+				//If timer under 1.25 seconds, lean towards a smaller kaboom
+
+				//Roll for safe explosion
+				if (rand.Next(0, 10) == 0) {
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.SparksAndFire, _corpseBombRadius, 0.25f);
+					_lastCorpseBombType = "SparksAndFire";
+					return;
+				}
+
+				//Roll for Motatov style explosions
+				if (rand.Next(0, 2) == 0) {
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.MolotovPlusFire, _corpseBombRadius, 1.5f);
+					_lastCorpseBombType = "MolotovPlusFire";
+					return;
+				}
+
+				//Roll for small explosion that can catch fire
+				if (rand.Next(0, 1) == 0) {
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.SmallerRockExplosion2, _corpseBombRadius, 1.5f);
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.OnlySound, 1f, 0f);
+					_lastCorpseBombType = "SmallerRockExplosion2";
+					return;
+				}
+
+				//Roll for small explosion that is kind of not lethal and doesn't seem to catch fire
+				if (rand.Next(0, 1) == 0) {
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.SmallLoudSound, _corpseBombRadius, 1.5f);
+					_lastCorpseBombType = "SmallLoudSound";
+					return;
+				}
+
+				//Surprise! Medium boom
+				World.AddExplosion(_theBray.Position, (int)ExplosionTypes.BigExplosion2, _corpseBombRadius, 1.5f);
+				_lastCorpseBombType = "BigExplosion2";
+				return;
+
+			} else if (_lastCorpseBombDelay > 1250) {
+				//Roll for gigachad blast if long fuse delay
+				//No gigachad outside of missions, I do have some respect for my horse
+				if (_lastCorpseBombDelay > 3000 && rand.Next(0,4) == 0 && MISC.GET_MISSION_FLAG()) {
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.BigExplosion3, _corpseBombRadius, 1.5f);
+					World.AddExplosion(_theBray.Position, (int)ExplosionTypes.OnlySound, 1f, 0f);
+					_lastCorpseBombType = "GigaChad";
+					//Make it sparkle if it is really big
+					if (_corpseBombRadius >= 4f) {
+						World.AddExplosion(_theBray.Position, (int)ExplosionTypes.FireWork, 1f, 0f);
+					}
+					return;
+				}
+
+				World.AddExplosion(_theBray.Position, (int)ExplosionTypes.BigExplosion3, _corpseBombRadius, 1.5f);
+				_lastCorpseBombType = "Classic Braysplosion";
+				return;
+			}
+			
 		}
 
 	}
