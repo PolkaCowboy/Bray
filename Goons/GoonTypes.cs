@@ -10,6 +10,9 @@ namespace Bray.Goons {
 		TheBray, 
 
 		// Free roam bray. Same as OG, but no radar blip
-		StealthBray
+		StealthBray,
+
+		// Bray that spawns when wanted
+		LawBray
 	}
 }

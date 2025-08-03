@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.Remoting.Messaging;
 using System.Text;
 using System.Windows.Forms;
@@ -18,7 +19,7 @@ namespace PolkaUtilils {
 		public List<Keys> pressedKeys = new List<Keys>();
 		/* Debug Stuff */
 		private string _debug;
-		private bool _showDebug = false;
+		private bool _showDebug = true;
 		/* Sticky log that hangs around until manually cleared*/
 		private string _log;
 
@@ -49,11 +50,11 @@ namespace PolkaUtilils {
 		public void ShowDebugMessage() {
 
 			if (_showDebug) {
-				TextElement textElement = new TextElement($"{_debug}\n\n{_log}", new PointF(100.0f, 100.0f), 0.30f);
+				TextElement textElement = new TextElement($"{_debug}\n\n{_log}\n\n{string.Join(", ", pressedKeys )}", new PointF(100.0f, 100.0f), 0.30f);
 				textElement.Draw();
 			}
 		}
-		public float GetRandomFloat(float min = 0.5f, float max = 2.0f) {
+		public static float GetRandomFloat(float min = 0.5f, float max = 2.0f) {
 			Random rand = new Random();
 			double range = max - min;
 			return (float)(min + rand.NextDouble() * range);
