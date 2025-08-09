@@ -8,24 +8,28 @@ namespace Bray.Goons {
 		private int _corpseBombTimerMax = 4000;
 		private int _corpseBombTimerMin = 0;
 		private float _corpseBombRadius = 0;
-		
+
 		private int _corpseBombFuseLength = 0;
 		private int _corpseBombAt = 0;
 
-		public TheBray(GoonTypes GoonType, uint relationShipGroup) : base(GoonType, relationShipGroup) {
+		public int BraytosisLevel = 3;
+
+		public TheBray(GoonTypes GoonType, uint relationShipGroup, int braytosisCount = 0, int braytosisLevel = 3) : base(GoonType, relationShipGroup) {
 			_blipType = BlipType.BLIP_STYLE_ENEMY_SEVERE;
 			Ped = World.CreatePed(PedHash.cs_aberdeenpigfarmer, GetSpawnPoint(_defaultMinSpawnDistance, _defaultMaxSpawnDistance), 0);
-			Ped.SetPedPromptName(GoonType == GoonTypes.LawBray ? "The LAW Bray" : "The Bray");
+			Name = GetName(braytosisCount);
+			Ped.SetPedPromptName(Name);
 			SetBrayMaxHealth();
 			SetBlip();
 			Ped.AddBlip(_blipType);
 			AddRelationshipGroup(_braylastionshipGroup);
+			BraytosisLevel = braytosisLevel;
 			/* Prep Bomb stats */
 			_corpseBombFuseLength = rand.Next(_corpseBombTimerMin, _corpseBombTimerMax);
 			_corpseBombRadius = PolkaUtililty.GetRandomFloat(1f, 2f) + (_corpseBombFuseLength / 1000);
 		}
 
-		public new void OnTick() {
+		public override void OnTick() {
 			if (Ped != null) {
 				if (Ped.IsAlive) {
 					if (!_truce && !IsInCombat()) {
@@ -47,7 +51,6 @@ namespace Bray.Goons {
 					if (Game.GameTime >= _corpseBombAt && _corpseBombAt > 0) {
 						DetonateBomb();
 						_corpseBombAt = 0;
-						//Ped = null;
 						CanRemove = true;
 					}
 				}
@@ -57,14 +60,14 @@ namespace Bray.Goons {
 			Ped.MaxHealth = 225;
 			Ped.Health = 225;
 		}
-		public new void SetBlip(BlipType blipStyle = BlipType.BLIP_STYLE_ENEMY_SEVERE) {
+		public override void SetBlip(BlipType blipStyle = BlipType.BLIP_STYLE_ENEMY_SEVERE) {
 			if (GoonType != GoonTypes.StealthBray) {
 				var blip = Ped.GetBlip;
 				MAP._BLIP_SET_STYLE(blip, (uint)blipStyle);
 			}
 		}
 
-		public new void Hunt(float searchRadius) {
+		public override void Hunt(float searchRadius) {
 			_truce = false;
 			World.SetRelationshipBetweenGroups(eRelationshipType.Hate, Ped.RelationshipGroup, Game.Player.Ped.RelationshipGroup);
 
@@ -133,6 +136,13 @@ namespace Bray.Goons {
 				return;
 			}
 
+		}
+
+		private string GetName(int braytosisCount) {
+			if (braytosisCount > 0) {
+				return $"The {PolkaUtililty.ToOrdinal(braytosisCount)} Bray";
+			}
+			return GoonType == GoonTypes.LawBray ? "The LAW Bray" : "The Bray";
 		}
 	}
 

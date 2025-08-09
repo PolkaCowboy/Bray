@@ -48,6 +48,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BattleModes.cs" />
     <Compile Include="Bray.cs" />
     <Compile Include="ExplosionTypes.cs" />
     <Compile Include="Goons\Goon.cs" />

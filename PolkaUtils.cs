@@ -1,17 +1,7 @@
-﻿using PolkaUtilils;
-using RDR2;
-using RDR2.Math;
-using RDR2.Native;
-using RDR2.NaturalMotion;
-using RDR2.UI;
+﻿using RDR2.UI;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using System.Drawing;
-using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Text;
 using System.Windows.Forms;
 
 namespace PolkaUtilils {
@@ -19,7 +9,7 @@ namespace PolkaUtilils {
 		public List<Keys> pressedKeys = new List<Keys>();
 		/* Debug Stuff */
 		private string _debug;
-		private bool _showDebug = true;
+		private bool _showDebug = false;
 		/* Sticky log that hangs around until manually cleared*/
 		private string _log;
 
@@ -68,6 +58,27 @@ namespace PolkaUtilils {
 
 		public void UnpressKey(KeyEventArgs pressedKey) {
 			pressedKeys.RemoveAll(p => p == pressedKey.KeyCode);
+		}
+
+		public static string ToOrdinal(int number) {
+			if (number <= 0)
+				return number.ToString();
+
+			int lastTwoDigits = number % 100;
+			int lastDigit = number % 10;
+
+			if (lastTwoDigits >= 11 && lastTwoDigits <= 13)
+				return number + "th";
+
+			string suffix;
+			switch (lastDigit) {
+				case 1: suffix = "st"; break;
+				case 2: suffix = "nd"; break;
+				case 3: suffix = "rd"; break;
+				default: suffix = "th"; break;
+			}
+
+			return number + suffix;
 		}
 
 	}

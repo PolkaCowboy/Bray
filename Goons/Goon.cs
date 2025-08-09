@@ -1,4 +1,5 @@
 ﻿using Bray.Goons;
+using PolkaUtilils;
 using RDR2;
 using RDR2.Math;
 using RDR2.Native;
@@ -13,13 +14,17 @@ namespace Bray {
 		internal BlipType _blipType = BlipType.BLIP_STYLE_ENEMY_SEVERE;
 		internal int _defaultMinSpawnDistance = 35;
 		internal int _defaultMaxSpawnDistance = 65;
+		
 		internal Random rand = new Random();
 		internal uint _braylastionshipGroup;
-		internal bool _truce = false;
+		public bool _truce = false;
+		public string Name;
 
 		//Set to true to drop the goon from any goon collections. Used after all post death shit is done.
 		public bool CanRemove = false;
-		public void OnTick() {	}
+		public virtual void OnTick() {
+			
+		}
 		public Goon(GoonTypes goonType, uint relationShipGroup) {
 			GoonType = goonType;
 			_braylastionshipGroup = relationShipGroup;
@@ -51,12 +56,12 @@ namespace Bray {
 			return PED.IS_PED_IN_COMBAT(Ped.Handle, PLAYER.PLAYER_PED_ID());
 		}
 
-		public void SetBlip(BlipType blipStyle = BlipType.BLIP_STYLE_ENEMY_PASSIVE_THREAT) {
+		public virtual void SetBlip(BlipType blipStyle = BlipType.BLIP_STYLE_ENEMY_PASSIVE_THREAT) {
 			var blip = Ped.GetBlip;
 			MAP._BLIP_SET_STYLE(blip, (uint)blipStyle);
 		}
 
-		public void Hunt(float searchRadius) { }
+		public virtual void Hunt(float searchRadius) { }
 		public void Truce() {
 			_truce = true;
 			World.SetRelationshipBetweenGroups(eRelationshipType.Like, _braylastionshipGroup, Game.Player.Ped.RelationshipGroup);
