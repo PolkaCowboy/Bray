@@ -48,8 +48,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BattleModes.cs" />
     <Compile Include="Bray.cs" />
     <Compile Include="ExplosionTypes.cs" />
+    <Compile Include="Goons\Goon.cs" />
+    <Compile Include="Goons\GoonTypes.cs" />
+    <Compile Include="Goons\TheBray.cs" />
+    <Compile Include="PolkaUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
